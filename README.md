@@ -6,8 +6,8 @@ dependencies, works on phones, tablets and computers.
 
 ## What's inside
 
-- **🍼 Tiny Tots** — a no-lose mode for toddlers. Roly steers itself, can't fall off, and
-  hops whenever any key is pressed or the screen is tapped.
+- **🍼 Tiny Tots** — a no-lose mode for toddlers. Roly can't fall off, blocks just bounce,
+  and any key other than the steering keys makes it hop.
 - **♾️ Endless Roll** — go as far as you can. Three speeds: Chill, Normal, Wild.
 - **⏱️ Star Rush** — grab as many stars as possible in 60 seconds.
 - **🗺️ Level Trek** — 12 levels, each with 3 stars to earn.
@@ -20,8 +20,8 @@ Scores, stars and skins are saved in the browser on each device (localStorage).
 
 | Action | Keyboard | Touch |
 | --- | --- | --- |
-| Steer | ◀ ▶ or A / D | Hold the arrow buttons |
-| Hop | Space, ↑ or W | HOP button, or tap the screen |
+| Steer | ◀ ▶ or A / D | Hold the left or right side of the screen, or the arrow buttons |
+| Hop | Space, ↑ or W | HOP button, or tap the middle of the screen |
 | Pause | Esc or P | ⏸ button |
 
 ## Run it locally

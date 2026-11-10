@@ -31,7 +31,7 @@ const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(save)); }
 
 // ---------- game data ----------
 const DIFFS = {
-  tots:   { v0: 8,  v1: 9,  ramp: 1500, hearts: Infinity, curve: 1.2, hazard: .55, react: 1.3, stars: 1,  maxBlocks: 1, lowOpen: true,  gaps: false, gapMax: 0, movers: false, narrow: false, slalom: false, assist: true, rails: true, bouncy: true },
+  tots:   { v0: 8,  v1: 9,  ramp: 1500, hearts: Infinity, curve: 1.2, hazard: .55, react: 1.3, stars: 1,  maxBlocks: 1, lowOpen: true,  gaps: false, gapMax: 0, movers: false, narrow: false, slalom: false, rails: true, bouncy: true },
   chill:  { v0: 11, v1: 18, ramp: 1800, hearts: 3, curve: 2.5, hazard: .8, react: .95, stars: .85, maxBlocks: 2, lowOpen: true,  gaps: true, gapMax: 1, movers: false, narrow: false, slalom: true },
   normal: { v0: 14, v1: 25, ramp: 1600, hearts: 2, curve: 4,   hazard: 1,  react: .68, stars: .75, maxBlocks: 3, lowOpen: false, gaps: true, gapMax: 2, movers: true,  narrow: true,  slalom: true },
   wild:   { v0: 19, v1: 33, ramp: 1400, hearts: 1, curve: 5.5, hazard: 1,  react: .5,  stars: .65, maxBlocks: 4, lowOpen: false, gaps: true, gapMax: 3, movers: true,  narrow: true,  slalom: true },
@@ -144,6 +144,8 @@ setInterval(() => {
 let state = 'menu';            // menu | play | pause | over
 let run = null, demo = null, lastStart = null;
 const keys = { left: false, right: false };
+const touches = new Map();          // finger id -> 'left' | 'right'
+const touchDir = d => { for (const v of touches.values()) if (v === d) return true; return false; };
 let jumpBuf = 0;
 const S = (n, a) => { if (state === 'play') sfx[n](a); };
 
@@ -289,9 +291,9 @@ function update(r, dt) {
   r.speed += (sp - r.speed) * Math.min(1, dt * 3);
 
   // steering
-  let inp = isDemo ? 0 : (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+  let inp = isDemo ? 0 : (keys.right || touchDir('right') ? 1 : 0) - (keys.left || touchDir('left') ? 1 : 0);
   const bi = b.z / ROW;
-  if (D.assist && inp === 0) {
+  if (isDemo) {
     let tx = cxAt(r, bi + 2);
     for (let k = 1; k <= 7; k++) {
       const row = r.rows[Math.floor(bi) + k - r.base]; if (!row) break;
@@ -543,7 +545,7 @@ function draw(r, dt) {
   const b = r.ball;
   cam.f = Math.min(H * .85, W * .7); cam.hy = H * .3;
   cam.y = Math.min(5.5, 6.5 * .42 * H / cam.f); cam.z = b.z - 6.5;
-  r.camX += (b.x * .8 + cxAt(r, b.z / ROW + 4) * .2 - r.camX) * Math.min(1, dt * 5);
+  r.camX = b.x;
   cam.x = r.camX;
   cam.sx = r.shake > 0 ? (Math.random() - .5) * 14 * r.shake : 0; cam.sy = r.shake > 0 ? (Math.random() - .5) * 14 * r.shake : 0;
 
@@ -606,7 +608,7 @@ function hud(r) {
   if (r.mode === 'endless') { setText(hudEl.main, dist + ' m'); setText(hudEl.sub, DIFF_LABEL[r.diff]); }
   else if (r.mode === 'rush') { setText(hudEl.main, Math.ceil(r.timer) + 's'); setText(hudEl.sub, 'Star Rush · ' + DIFF_LABEL[r.diff]); }
   else if (r.mode === 'trek') { setText(hudEl.main, 'Level ' + (r.lvlIdx + 1)); setText(hudEl.sub, r.lvl.name); hudEl.bar.style.width = clamp(r.ball.z / r.lvl.len * 100, 0, 100) + '%'; }
-  else { setText(hudEl.main, '⭐ ' + r.stars); setText(hudEl.sub, 'Tap or press anything to hop!'); }
+  else { setText(hudEl.main, '⭐ ' + r.stars); setText(hudEl.sub, isTouch() ? 'Hold a side to steer · tap the middle to hop' : '◀ ▶ to steer · any other key hops'); }
   setText(hudEl.stars, '⭐ ' + r.stars);
   setText(hudEl.hearts, isFinite(r.maxHearts) && r.mode !== 'rush' ? '❤️'.repeat(Math.max(0, r.hearts)) + '🤍'.repeat(Math.max(0, r.maxHearts - r.hearts)) : '');
   const pw = [];
@@ -638,13 +640,13 @@ function start(mode, diff, lvlIdx) {
   audio();
   lastStart = { mode, diff, lvlIdx };
   run = newRun(mode, diff, lvlIdx);
-  keys.left = keys.right = false; jumpBuf = 0;
+  keys.left = keys.right = false; touches.clear(); jumpBuf = 0;
   state = 'play';
   hudEl.prog.classList.toggle('hide', mode !== 'trek');
   $('#btnFinish').textContent = mode === 'tots' ? '🏁 All done' : '🏠 Quit to home';
   show(null);
 }
-function pause() { if (state !== 'play') return; state = 'pause'; keys.left = keys.right = false; show('pause'); }
+function pause() { if (state !== 'play') return; state = 'pause'; keys.left = keys.right = false; touches.clear(); show('pause'); }
 function resume() { if (state !== 'pause') return; state = 'play'; show(null); }
 function goHome() { state = 'menu'; run = null; refreshHome(); show('home'); }
 
@@ -789,7 +791,15 @@ window.addEventListener('keyup', e => {
   if (k === 'ArrowLeft' || k === 'a' || k === 'A') keys.left = false;
   if (k === 'ArrowRight' || k === 'd' || k === 'D') keys.right = false;
 });
-cv.addEventListener('pointerdown', e => { if (state === 'play') { hop(); e.preventDefault(); } });
+// mouse click hops; a finger held on the left or right side steers, the middle hops
+cv.addEventListener('pointerdown', e => {
+  if (state !== 'play') return;
+  e.preventDefault();
+  if (e.pointerType === 'mouse') { hop(); return; }
+  const f = e.clientX / W;
+  if (f < .38) touches.set(e.pointerId, 'left'); else if (f > .62) touches.set(e.pointerId, 'right'); else hop();
+});
+for (const ev of ['pointerup', 'pointercancel']) window.addEventListener(ev, e => touches.delete(e.pointerId));
 function hold(el, on, off) {
   const down = e => { e.preventDefault(); el.classList.add('down'); on(); };
   const up = () => { el.classList.remove('down'); if (off) off(); };
@@ -801,7 +811,7 @@ hold($('#tLeft'), () => { keys.left = true; }, () => { keys.left = false; });
 hold($('#tRight'), () => { keys.right = true; }, () => { keys.right = false; });
 hold($('#tJump'), hop);
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
-window.addEventListener('blur', () => { keys.left = keys.right = false; });
+window.addEventListener('blur', () => { keys.left = keys.right = false; touches.clear(); });
 
 // ---------- main loop ----------
 let last = 0;
