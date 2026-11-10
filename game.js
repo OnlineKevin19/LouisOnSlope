@@ -3,7 +3,10 @@
 'use strict';
 
 // ---------- helpers ----------
-const $ = s => document.querySelector(s);
+// If the page and this script are ever out of step (an old cached page with a newer script),
+// a missing element must never crash the game, so lookups fall back to a harmless spare element.
+const $ = s => document.querySelector(s) || document.createElement('div');
+const BUILD = '9';   // keep in step with <meta name="build"> and the ?v= numbers in index.html
 const $$ = s => [...document.querySelectorAll(s)];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -87,7 +90,7 @@ const icon = n => `<svg class="ic" viewBox="0 0 24 24" stroke="#1d1530" stroke-w
 
 // ---------- game data ----------
 const DIFFS = {
-  tots:   { v0: 8,  v1: 9,  ramp: 1500, hearts: Infinity, dmg: 0, curve: 1.2, hazard: .55, react: 1.3, stars: 1,  maxBlocks: 1, lowOpen: true,  gaps: false, gapMax: 0, movers: false, narrow: false, slalom: false, rails: true, bouncy: true },
+  tots:   { v0: 8,  v1: 9,  ramp: 1500, hearts: Infinity, dmg: 1, curve: 1.2, hazard: .55, react: 1.3, stars: 1,  maxBlocks: 1, lowOpen: true,  gaps: false, gapMax: 0, movers: false, narrow: false, slalom: false, rails: true, bouncy: true },
   chill:  { v0: 11, v1: 18, ramp: 1800, hearts: 3, dmg: 1, curve: 2.5, hazard: .8, react: .95, stars: .85, maxBlocks: 2, lowOpen: true,  gaps: true, gapMax: 1, movers: false, narrow: false, slalom: true },
   normal: { v0: 14, v1: 25, ramp: 1600, hearts: 2, dmg: 1.3, curve: 4,   hazard: 1,  react: .68, stars: .75, maxBlocks: 3, lowOpen: false, gaps: true, gapMax: 2, movers: true,  narrow: true,  slalom: true },
   wild:   { v0: 19, v1: 33, ramp: 1400, hearts: 1, dmg: 1.6, curve: 5.5, hazard: 1,  react: .5,  stars: .65, maxBlocks: 4, lowOpen: false, gaps: true, gapMax: 3, movers: true,  narrow: true,  slalom: true },
@@ -222,7 +225,7 @@ function newRun(mode, diffKey, lvlIdx) {
     ph1: rng() * 6.28, ph2: rng() * 6.28, themeOff: lvl ? lvlIdx : 0,
     lenRows: lvl ? Math.round(lvl.len / ROW) : 0, finRow: 0, totalStars: 0, starItems: 0,
     ball: { x: 0, y: 0, z: 2, vx: 0, vy: 0, ground: true, fall: false, spin: 0, sq: 0, air: 0 },
-    speed: 0, hp: 100, lastHit: -99, hasHp: isFinite(D.hearts) && mode !== 'rush', maxHearts: D.hearts, stars: 0, combo: 0, comboT: 0, jumps: 0, powers: 0, hits: 0,
+    speed: 0, hp: 100, lastHit: -99, hasHp: mode !== 'demo', maxHearts: D.hearts, stars: 0, combo: 0, comboT: 0, jumps: 0, powers: 0, hits: 0,
     inv: 0, shield: 0, magnet: 0, slow: 0, dbl: 0, time: 0, timer: mode === 'rush' ? 60 : 0,
     cleanStart: 0, cleanBest: 0, intro: mode === 'demo' ? 0 : 1.6, done: false,
     camX: 0, shake: 0, parts: [], blink: 0,
@@ -235,8 +238,8 @@ function pickPower(r) {
   const o = ['magnet', 'x2'];
   if (!r.D.bouncy) {
     o.push('shield', 'slow');
+    o.push('heart');
     if (r.mode === 'rush') o.push('clock', 'clock');
-    else if (isFinite(r.D.hearts)) o.push('heart');
   }
   return o[Math.floor(r.rng() * o.length)];
 }
@@ -422,7 +425,7 @@ function hitObstacle(r, o, ox, oz) {
   const b = r.ball;
   o.hit = true;
   burst(r, ox, o.h / 2, oz, 14, ['#ff8ad8', '#ffd23f', '#ffffff']);
-  if (r.D.bouncy) { b.vy = 10; b.ground = false; b.air = 1; S('boing'); return; }
+  if (r.D.bouncy) { b.vy = 10; b.ground = false; b.air = 1; S('boing'); damage(r, o.h < 1 ? 5 : 10); return; }
   if (r.inv > 0) return;
   if (r.shield > 0) { r.shield = 0; r.inv = .6; S('power'); toast('🛡️ Shield saved you!'); return; }
   // a clip on the corner or a low block is a small bump; a head-on crash into a tall block is a big one
@@ -432,12 +435,15 @@ function hitObstacle(r, o, ox, oz) {
 function damage(r, base) {
   const b = r.ball;
   r.hits++; r.cleanBest = Math.max(r.cleanBest, b.z - r.cleanStart); r.cleanStart = b.z;
-  r.inv = 1.8; r.shake = .35; S('hit');
-  if (r.mode === 'rush') { r.timer = Math.max(0, r.timer - 3); toast('−3 seconds'); return; }
+  const soft = r.D.bouncy;               // Tiny Tots: same bar and effect, but it can never end the game
+  if (!soft) { r.inv = 1.8; r.shake = .35; S('hit'); }
   const amt = Math.round(base * r.D.dmg);
   r.hp = Math.max(0, r.hp - amt); r.lastHit = r.time; r.lastDmg = amt; hpFlash(amt >= 18);
-  if (amt >= 18) r.shake = .5;
-  if (r.hp <= 0) end(false);
+  if (amt >= 18 && !soft) r.shake = .5;
+  if (r.hp <= 0) {
+    if (soft) { r.hp = 100; toast('💖 All better!'); S('power'); }
+    else end(false);
+  }
 }
 function fell(r) {
   const b = r.ball;
@@ -691,6 +697,12 @@ function draw(r, dt) {
 }
 
 // ---------- HUD ----------
+if (!document.querySelector('#hudHp')) {
+  const hp = document.createElement('div'); hp.id = 'hudHp'; hp.className = 'hide';
+  hp.innerHTML = '<i data-ic="heart"></i><div class="hpbar"><i></i></div>';
+  $('#hudRight').appendChild(hp);
+  const old = document.querySelector('#hudHearts'); if (old) old.remove();
+}
 const hudEl = { main: $('#hudMain'), sub: $('#hudSub'), stars: $('#hudStars'), hp: $('#hudHp'), hpFill: $('#hudHp .hpbar i'), pow: $('#hudPow'), prog: $('#prog'), bar: $('#prog i') };
 const setText = (el, t) => { if (el._t !== t) { el._t = t; el.textContent = t; } };
 function hud(r) {
@@ -775,9 +787,9 @@ function end(win) {
     const best = list.length ? list[0].s : 0;
     list.push({ n: (save.name || 'Player').slice(0, 12), s: score });
     list.sort((a, b) => b.s - a.s); list.length = Math.min(list.length, 8);
-    title = r.mode === 'rush' ? "Time's up!" : 'Nice roll!';
+    title = r.mode === 'rush' ? (win ? "Time's up!" : 'Out of health!') : 'Nice roll!';
     html = `<div class="big">${score}</div>
-      <p>${r.mode === 'rush' ? 'stars in 60 seconds' : `${dist} m + ${r.stars} ⭐ × 10`}</p>
+      <p>${r.mode === 'rush' ? (win ? 'stars in 60 seconds' : 'stars before the health bar ran out') : `${dist} m + ${r.stars} ⭐ × 10`}</p>
       ${score > best && score > 0 ? '<p><span class="badge">🎉 New family record!</span></p>' : `<p>Record to beat: <b>${best}</b></p>`}`;
   }
 
@@ -919,19 +931,32 @@ window.addEventListener('blur', () => { keys.left = keys.right = false; touches.
 
 // ---------- main loop ----------
 let last = 0;
+let errShown = 0;
+function guard(fn) {
+  try { fn(); } catch (e) { if (errShown++ < 3 && window.console) console.error('Roly Roll skipped a step:', e); try { ctx.setTransform(Math.min(window.devicePixelRatio || 1, 2), 0, 0, Math.min(window.devicePixelRatio || 1, 2), 0, 0); ctx.globalAlpha = 1; } catch (e2) { /* ignore */ } }
+}
 function frame(t) {
+  requestAnimationFrame(frame);          // first, so nothing below can ever stop the loop
   const dt = Math.min(.033, Math.max(0, (t - last) / 1000)); last = t;
-  if (state === 'play') { update(run, dt); if (run && state !== 'menu') hud(run); }
-  else if (state === 'menu') update(demo, dt);
+  if (state === 'play') { guard(() => update(run, dt)); guard(() => { if (run && state !== 'menu') hud(run); }); }
+  else if (state === 'menu') guard(() => update(demo, dt));
   const r = state === 'menu' || !run ? demo : run;
-  if (state === 'over') { for (const p of r.parts) { p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 600 * dt; p.rot += dt * 8; } r.parts = r.parts.filter(p => p.life > 0); }
-  draw(r, state === 'pause' ? 0 : dt);
-  requestAnimationFrame(frame);
+  if (state === 'over') guard(() => { for (const p of r.parts) { p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 600 * dt; p.rot += dt * 8; } r.parts = r.parts.filter(p => p.life > 0); });
+  guard(() => draw(r, state === 'pause' ? 0 : dt));
 }
 $$('[data-ic]').forEach(el => { el.innerHTML = icon(el.dataset.ic); });
 if (!ctx.roundRect) CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h) { this.rect(x, y, w, h); };
 demo = newRun('demo', 'chill');
-refreshHome(); show('home');
+guard(() => { refreshHome(); show('home'); });
+{ const meta = document.querySelector('meta[name="build"]');
+  if ((meta && meta.content) !== BUILD) {
+    try {
+      if (sessionStorage.getItem('rr.fresh') !== BUILD) {
+        sessionStorage.setItem('rr.fresh', BUILD);
+        fetch(location.href, { cache: 'reload' }).then(() => location.reload(), () => {});
+      }
+    } catch (e) { /* no storage: just keep playing with the safe fallbacks */ }
+  } }
 requestAnimationFrame(frame);
 
 // tiny hook so the game can be poked at from the console while testing
