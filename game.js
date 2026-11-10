@@ -6,7 +6,7 @@
 // If the page and this script are ever out of step (an old cached page with a newer script),
 // a missing element must never crash the game, so lookups fall back to a harmless spare element.
 const $ = s => document.querySelector(s) || document.createElement('div');
-const BUILD = '9';   // keep in step with <meta name="build"> and the ?v= numbers in index.html
+const BUILD = '10';   // keep in step with <meta name="build"> and the ?v= numbers in index.html
 const $$ = s => [...document.querySelectorAll(s)];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -927,6 +927,10 @@ hold($('#tLeft'), () => { keys.left = true; }, () => { keys.left = false; });
 hold($('#tRight'), () => { keys.right = true; }, () => { keys.right = false; });
 hold($('#tJump'), hop);
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+// iPhone / iPad Safari: no pinch-zoom, double-tap zoom or page drag while playing
+for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(ev, e => e.preventDefault());
+document.addEventListener('dblclick', e => e.preventDefault());
+document.addEventListener('touchmove', e => { if (state === 'play') e.preventDefault(); }, { passive: false });
 window.addEventListener('blur', () => { keys.left = keys.right = false; touches.clear(); });
 
 // ---------- main loop ----------

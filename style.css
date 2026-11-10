@@ -138,7 +138,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--purple);outline
   .grid.skins{grid-template-columns:repeat(2,1fr)}
   .podium{grid-template-columns:1fr}
   .help div{grid-template-columns:1fr;gap:2px}
-  .who{font-size:0}.who input{font-size:15px;width:118px}
+  .who{font-size:0}.who input{font-size:16px;width:118px}
   .topbar{gap:7px}
 }
 @media (prefers-reduced-motion:reduce){.mode{transition:none}}
@@ -163,3 +163,14 @@ svg.ic{width:1.2em;height:1.2em;vertical-align:-.24em;display:inline-block}
 @keyframes hpshake{20%{transform:translateX(-7px) rotate(-2deg)}45%{transform:translateX(6px) rotate(2deg)}70%{transform:translateX(-3px)}}
 @keyframes hpbeat{50%{transform:scale(1.25)}}
 @media (prefers-reduced-motion:reduce){#hudHp.hit,#hudHp.low svg.ic{animation:none}}
+
+/* touch devices (iPhone, iPad, Android) */
+html,body{-webkit-touch-callout:none;-webkit-text-size-adjust:100%;touch-action:manipulation}
+button{touch-action:manipulation}
+.who input{font-size:16px}   /* below 16px iOS zooms the page when the box is tapped */
+@media (max-width:560px){
+  #hudMain{font-size:30px}
+  #hudSub{font-size:12px;max-width:44vw;white-space:normal;margin:2px auto 0}
+  .hpbar{width:26vw;height:18px}
+  #hudStars{padding:4px 11px;font-size:14px}
+}
