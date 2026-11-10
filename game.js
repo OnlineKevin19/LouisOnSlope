@@ -77,6 +77,7 @@ const ICONS = {
   board: '<path d="M7 3h10v5a5 5 0 0 1-10 0z" fill="#ffd23f"/><path d="M7 5H4c0 3 1.5 4.5 3.5 4.5M17 5h3c0 3-1.5 4.5-3.5 4.5M12 13v4M8 21h8" fill="none"/>',
   missions: '<circle cx="12" cy="12" r="9.5" fill="#fff"/><circle cx="12" cy="12" r="6" fill="#e2553f"/><circle cx="12" cy="12" r="2.2" fill="#fff"/>',
   skins: '<path d="M8 3 2 7l2.5 4L7 9.5V21h10V9.5l2.5 1.5L22 7l-6-4c-1 2-7 2-8 0z" fill="#5aa9ff"/>',
+  heart: '<path d="M12 20.5C6 16 2.5 12.5 2.5 8.8A4.8 4.8 0 0 1 12 6.6a4.8 4.8 0 0 1 9.5 2.2c0 3.7-3.5 7.2-9.5 11.7z" fill="#e2553f"/>',
   help: '<circle cx="12" cy="12" r="9.5" fill="#ffd23f"/><path d="M9.2 9.3a2.9 2.9 0 1 1 4.3 2.5c-1 .6-1.5 1.2-1.5 2.2" fill="none"/><circle cx="12" cy="17.3" r=".7" fill="#1d1530"/>',
   sound: '<path d="M3 9.5h4l5-4.5v14l-5-4.5H3z" fill="#8f76e0"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" fill="none"/>',
   mute: '<path d="M3 9.5h4l5-4.5v14l-5-4.5H3z" fill="#c9c2e6"/><path d="M16 9.5l5 5M21 9.5l-5 5" fill="none"/>',
@@ -86,10 +87,10 @@ const icon = n => `<svg class="ic" viewBox="0 0 24 24" stroke="#1d1530" stroke-w
 
 // ---------- game data ----------
 const DIFFS = {
-  tots:   { v0: 8,  v1: 9,  ramp: 1500, hearts: Infinity, curve: 1.2, hazard: .55, react: 1.3, stars: 1,  maxBlocks: 1, lowOpen: true,  gaps: false, gapMax: 0, movers: false, narrow: false, slalom: false, rails: true, bouncy: true },
-  chill:  { v0: 11, v1: 18, ramp: 1800, hearts: 3, curve: 2.5, hazard: .8, react: .95, stars: .85, maxBlocks: 2, lowOpen: true,  gaps: true, gapMax: 1, movers: false, narrow: false, slalom: true },
-  normal: { v0: 14, v1: 25, ramp: 1600, hearts: 2, curve: 4,   hazard: 1,  react: .68, stars: .75, maxBlocks: 3, lowOpen: false, gaps: true, gapMax: 2, movers: true,  narrow: true,  slalom: true },
-  wild:   { v0: 19, v1: 33, ramp: 1400, hearts: 1, curve: 5.5, hazard: 1,  react: .5,  stars: .65, maxBlocks: 4, lowOpen: false, gaps: true, gapMax: 3, movers: true,  narrow: true,  slalom: true },
+  tots:   { v0: 8,  v1: 9,  ramp: 1500, hearts: Infinity, dmg: 0, curve: 1.2, hazard: .55, react: 1.3, stars: 1,  maxBlocks: 1, lowOpen: true,  gaps: false, gapMax: 0, movers: false, narrow: false, slalom: false, rails: true, bouncy: true },
+  chill:  { v0: 11, v1: 18, ramp: 1800, hearts: 3, dmg: 25, curve: 2.5, hazard: .8, react: .95, stars: .85, maxBlocks: 2, lowOpen: true,  gaps: true, gapMax: 1, movers: false, narrow: false, slalom: true },
+  normal: { v0: 14, v1: 25, ramp: 1600, hearts: 2, dmg: 34, curve: 4,   hazard: 1,  react: .68, stars: .75, maxBlocks: 3, lowOpen: false, gaps: true, gapMax: 2, movers: true,  narrow: true,  slalom: true },
+  wild:   { v0: 19, v1: 33, ramp: 1400, hearts: 1, dmg: 50, curve: 5.5, hazard: 1,  react: .5,  stars: .65, maxBlocks: 4, lowOpen: false, gaps: true, gapMax: 3, movers: true,  narrow: true,  slalom: true },
 };
 const DIFF_LABEL = { chill: 'Chill', normal: 'Normal', wild: 'Wild' };
 
@@ -110,7 +111,7 @@ const LEVELS = [
 function levelDiff(L) {
   const f = L.f;
   return Object.assign({}, DIFFS.chill, {
-    v0: L.v[0], v1: L.v[1], ramp: L.len, curve: L.curve, hearts: 3, hazard: 1, react: .85,
+    v0: L.v[0], v1: L.v[1], ramp: L.len, curve: L.curve, hearts: 3, dmg: 30, hazard: 1, react: .85,
     maxBlocks: f.blocks || 2, lowOpen: L.p < .3, gaps: !!f.gaps, gapMax: f.gaps || 0,
     movers: !!f.movers, narrow: !!f.narrow, slalom: L.p >= .4,
   });
@@ -221,7 +222,7 @@ function newRun(mode, diffKey, lvlIdx) {
     ph1: rng() * 6.28, ph2: rng() * 6.28, themeOff: lvl ? lvlIdx : 0,
     lenRows: lvl ? Math.round(lvl.len / ROW) : 0, finRow: 0, totalStars: 0, starItems: 0,
     ball: { x: 0, y: 0, z: 2, vx: 0, vy: 0, ground: true, fall: false, spin: 0, sq: 0, air: 0 },
-    speed: 0, hearts: D.hearts, maxHearts: D.hearts, stars: 0, combo: 0, comboT: 0, jumps: 0, powers: 0, hits: 0,
+    speed: 0, hp: 100, lastHit: -99, hasHp: isFinite(D.hearts) && mode !== 'rush', maxHearts: D.hearts, stars: 0, combo: 0, comboT: 0, jumps: 0, powers: 0, hits: 0,
     inv: 0, shield: 0, magnet: 0, slow: 0, dbl: 0, time: 0, timer: mode === 'rush' ? 60 : 0,
     cleanStart: 0, cleanBest: 0, intro: mode === 'demo' ? 0 : 1.6, done: false,
     camX: 0, shake: 0, parts: [], blink: 0,
@@ -341,6 +342,7 @@ function update(r, dt) {
   r.time += dt; r.blink += dt;
   for (const k of ['inv', 'shield', 'magnet', 'slow', 'dbl']) if (r[k] > 0) r[k] = Math.max(0, r[k] - dt);
   r.comboT -= dt; if (r.comboT <= 0) r.combo = 0;
+  if (r.hasHp && r.hp < 100 && r.time - r.lastHit > 5) r.hp = Math.min(100, r.hp + 1.5 * dt);   // stamina slowly comes back
 
   let sp = speedAt(r, b.z); if (r.slow > 0) sp *= .6;
   r.speed += (sp - r.speed) * Math.min(1, dt * 3);
@@ -430,8 +432,8 @@ function damage(r) {
   r.hits++; r.cleanBest = Math.max(r.cleanBest, b.z - r.cleanStart); r.cleanStart = b.z;
   r.inv = 1.8; r.shake = .35; S('hit');
   if (r.mode === 'rush') { r.timer = Math.max(0, r.timer - 3); toast('−3 seconds'); return; }
-  r.hearts--;
-  if (r.hearts <= 0) end(false);
+  r.hp = Math.max(0, r.hp - r.D.dmg); r.lastHit = r.time; hpFlash();
+  if (r.hp <= 0) end(false);
 }
 function fell(r) {
   const b = r.ball;
@@ -461,7 +463,7 @@ function collect(r, it, x, z) {
   else if (it.t === 'slow') { r.slow = 6; toast('🐌 Slow-mo!'); }
   else if (it.t === 'x2') { r.dbl = 10; toast('✖️2 Double stars!'); }
   else if (it.t === 'clock') { r.timer += 5; toast('⏱️ +5 seconds!'); }
-  else if (it.t === 'heart') { if (r.hearts < r.maxHearts) { r.hearts++; toast('❤️ Heart back!'); } else { r.stars += 5; toast('❤️ Full hearts: +5 ⭐'); } }
+  else if (it.t === 'heart') { if (r.hp < 100) { r.hp = Math.min(100, r.hp + 35); toast('❤️ Health up!'); } else { r.stars += 5; toast('❤️ Full health: +5 ⭐'); } }
 }
 
 // ---------- drawing ----------
@@ -601,8 +603,18 @@ function drawRunBall(r) {
     const g = proj(b.x, 0, b.z), k = clamp(1 - b.y * .13, .4, 1);
     ctx.fillStyle = 'rgba(29,21,48,.25)'; ctx.beginPath(); ctx.ellipse(g[0], g[1], g[2] * BALL_R * 1.05 * k, g[2] * BALL_R * .32 * k, 0, 0, 7); ctx.fill();
   }
-  if (r.inv > 0 && !r.D.bouncy && Math.floor(r.blink * 14) % 2) return;
   const p = proj(b.x, b.y + BALL_R, b.z), rad = BALL_R * p[2];
+  const since = r.time - r.lastHit;
+  if (r.hasHp && since < 1.8) {          // a little health bar pops up over Roly right after a bump
+    const w = rad * 2.6, h = Math.max(8, rad * .34), x = p[0] - w / 2, y = p[1] - rad * 2.1 - h;
+    ctx.save(); ctx.globalAlpha = clamp((1.8 - since) * 3, 0, 1);
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.roundRect(x + 3, y + 3, w, h, h / 2); ctx.fill();
+    ctx.fillStyle = '#fbf7ef'; ctx.beginPath(); ctx.roundRect(x, y, w, h, h / 2); ctx.fill();
+    if (r.hp > 0) { ctx.save(); ctx.clip(); ctx.fillStyle = hpColor(r.hp); ctx.fillRect(x, y, w * r.hp / 100, h); ctx.restore(); }
+    ctx.lineWidth = 2.5; ctx.strokeStyle = INK; ctx.beginPath(); ctx.roundRect(x, y, w, h, h / 2); ctx.stroke();
+    ctx.restore();
+  }
+  if (r.inv > 0 && !r.D.bouncy && Math.floor(r.blink * 14) % 2) return;
   const look = clamp(b.vx / 9, -1, 1), blink = (r.blink % 3.4) > 3.25;
   drawBall(ctx, p[0], p[1], rad, skinNow(), b.spin, look, b.sq, blink);
   if (r.shield > 0) {
@@ -672,7 +684,7 @@ function draw(r, dt) {
 }
 
 // ---------- HUD ----------
-const hudEl = { main: $('#hudMain'), sub: $('#hudSub'), stars: $('#hudStars'), hearts: $('#hudHearts'), pow: $('#hudPow'), prog: $('#prog'), bar: $('#prog i') };
+const hudEl = { main: $('#hudMain'), sub: $('#hudSub'), stars: $('#hudStars'), hp: $('#hudHp'), hpFill: $('#hudHp .hpbar i'), pow: $('#hudPow'), prog: $('#prog'), bar: $('#prog i') };
 const setText = (el, t) => { if (el._t !== t) { el._t = t; el.textContent = t; } };
 function hud(r) {
   const dist = Math.floor(r.ball.z);
@@ -681,7 +693,12 @@ function hud(r) {
   else if (r.mode === 'trek') { setText(hudEl.main, 'Level ' + (r.lvlIdx + 1)); setText(hudEl.sub, r.lvl.name); hudEl.bar.style.width = clamp(r.ball.z / r.lvl.len * 100, 0, 100) + '%'; }
   else { setText(hudEl.main, '⭐ ' + r.stars); setText(hudEl.sub, isTouch() ? 'Hold a side to steer · tap the middle to hop' : '◀ ▶ to steer · any other key hops'); }
   setText(hudEl.stars, '⭐ ' + r.stars);
-  setText(hudEl.hearts, isFinite(r.maxHearts) && r.mode !== 'rush' ? '❤️'.repeat(Math.max(0, r.hearts)) + '🤍'.repeat(Math.max(0, r.maxHearts - r.hearts)) : '');
+  hudEl.hp.classList.toggle('hide', !r.hasHp);
+  if (r.hasHp) {
+    const w = Math.round(r.hp) + '%';
+    if (hudEl.hpFill._w !== w) { hudEl.hpFill._w = w; hudEl.hpFill.style.width = w; }
+    hudEl.hp.classList.toggle('mid', r.hp <= 67 && r.hp > 34); hudEl.hp.classList.toggle('low', r.hp <= 34);
+  }
   const pw = [];
   if (r.shield > 0) pw.push('🛡️ ready');
   if (r.magnet > 0) pw.push('🧲 ' + Math.ceil(r.magnet));
@@ -691,6 +708,9 @@ function hud(r) {
   if (hudEl.pow._t !== key) { hudEl.pow._t = key; hudEl.pow.innerHTML = pw.map(t => `<span>${t}</span>`).join(''); }
 }
 
+const hpColor = hp => hp > 67 ? '#1fa58a' : hp > 34 ? '#ffd23f' : '#e2553f';
+let hpT = 0;
+function hpFlash() { hudEl.hp.classList.add('hit'); clearTimeout(hpT); hpT = setTimeout(() => hudEl.hp.classList.remove('hit'), 420); }
 let toastT = 0;
 function toast(msg) {
   if (state !== 'play') return;
@@ -902,6 +922,7 @@ function frame(t) {
   requestAnimationFrame(frame);
 }
 $$('[data-ic]').forEach(el => { el.innerHTML = icon(el.dataset.ic); });
+if (!ctx.roundRect) CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h) { this.rect(x, y, w, h); };
 demo = newRun('demo', 'chill');
 refreshHome(); show('home');
 requestAnimationFrame(frame);
