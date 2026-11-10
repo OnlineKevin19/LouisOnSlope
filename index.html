@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Roly Roll — a happy rolling game for the whole family</title>
+<meta name="description" content="Roll, hop and collect stars! A friendly endless rolling game with a no-lose toddler mode, levels, daily missions and skins.">
+<meta name="theme-color" content="#735fc9">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='36' r='24' fill='%23ff8ad8' stroke='%231d1530' stroke-width='4'/%3E%3Ccircle cx='22' cy='16' r='9' fill='%23fff' stroke='%231d1530' stroke-width='3'/%3E%3Ccircle cx='42' cy='16' r='9' fill='%23fff' stroke='%231d1530' stroke-width='3'/%3E%3Ccircle cx='23' cy='15' r='4' fill='%231d1530'/%3E%3Ccircle cx='43' cy='15' r='4' fill='%231d1530'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600&family=Lilita+One&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="game" aria-label="Game"></canvas>
+
+<!-- In-game HUD -->
+<div id="hud" class="hide">
+  <button id="btnPause" class="round" aria-label="Pause">⏸</button>
+  <div id="hudCenter">
+    <div id="hudMain">0</div>
+    <div id="hudSub"></div>
+    <div id="prog" class="hide"><i></i></div>
+  </div>
+  <div id="hudRight">
+    <div id="hudStars">⭐ 0</div>
+    <div id="hudHearts"></div>
+  </div>
+  <div id="hudPow"></div>
+</div>
+
+<!-- Touch controls -->
+<div id="touch" class="hide">
+  <button id="tLeft" class="pad" aria-label="Steer left">◀</button>
+  <button id="tJump" class="pad jump" aria-label="Jump">HOP</button>
+  <button id="tRight" class="pad" aria-label="Steer right">▶</button>
+</div>
+
+<div id="toast" class="hide"></div>
+
+<!-- HOME -->
+<section id="home" class="screen">
+  <div class="card">
+    <div class="topbar">
+      <label class="who">Who's playing?
+        <input id="name" maxlength="12" placeholder="Your name" autocomplete="off">
+      </label>
+      <div class="bank" id="bank">⭐ 0</div>
+      <button id="btnSound" class="round" aria-label="Sound on or off">🔊</button>
+      <button id="btnMusic" class="round" aria-label="Music on or off">🎵</button>
+    </div>
+    <h1 class="logo"><span>ROLY</span> <span class="alt">ROLL</span></h1>
+    <p class="tag">Roll, hop and grab the stars. Pick a way to play!</p>
+
+    <div class="modes">
+      <button class="mode m-tots" data-mode="tots"><b>🍼 Tiny Tots</b><small>No losing, ever. Any key or tap makes Roly hop!</small></button>
+      <button class="mode m-endless" data-mode="endless"><b>♾️ Endless Roll</b><small>How far can you go?</small></button>
+      <button class="mode m-rush" data-mode="rush"><b>⏱️ Star Rush</b><small>60 seconds. Grab every star!</small></button>
+      <button class="mode m-trek" data-mode="trek"><b>🗺️ Level Trek</b><small>12 levels, 3 stars each</small></button>
+    </div>
+
+    <div class="diffrow">
+      <span>Speed for Endless &amp; Star Rush:</span>
+      <div class="chips" id="diffs">
+        <button data-diff="chill">🌸 Chill</button>
+        <button data-diff="normal">⚡ Normal</button>
+        <button data-diff="wild">🔥 Wild</button>
+      </div>
+    </div>
+
+    <div class="nav">
+      <button data-go="board">🏆 Leaderboard</button>
+      <button data-go="missions">🎯 Missions</button>
+      <button data-go="skins">🎨 Skins</button>
+      <button data-go="help">❓ How to play</button>
+    </div>
+  </div>
+</section>
+
+<!-- LEVELS -->
+<section id="levels" class="screen hide">
+  <div class="card">
+    <h2 class="title">Level Trek</h2>
+    <p class="tag">Earn up to 3 stars: finish · grab half the stars · no bumps</p>
+    <div id="levelGrid" class="grid"></div>
+    <div class="actions"><button class="btn ghost" data-go="home">← Back</button></div>
+  </div>
+</section>
+
+<!-- LEADERBOARD -->
+<section id="board" class="screen hide">
+  <div class="card">
+    <h2 class="title">Family Leaderboard</h2>
+    <div class="chips" id="boardMode">
+      <button data-v="endless">♾️ Endless</button>
+      <button data-v="rush">⏱️ Star Rush</button>
+    </div>
+    <div class="chips" id="boardDiff">
+      <button data-v="chill">🌸 Chill</button>
+      <button data-v="normal">⚡ Normal</button>
+      <button data-v="wild">🔥 Wild</button>
+    </div>
+    <div id="podium" class="podium"></div>
+    <div id="boardRows"></div>
+    <div class="actions"><button class="btn ghost" data-go="home">← Back</button></div>
+  </div>
+</section>
+
+<!-- MISSIONS -->
+<section id="missions" class="screen hide">
+  <div class="card">
+    <h2 class="title">Today's Missions</h2>
+    <p class="tag">Three new missions every day. Each one pays ⭐ 30.</p>
+    <div id="missionList"></div>
+    <div class="actions"><button class="btn ghost" data-go="home">← Back</button></div>
+  </div>
+</section>
+
+<!-- SKINS -->
+<section id="skins" class="screen hide">
+  <div class="card">
+    <h2 class="title">Roly's Wardrobe</h2>
+    <p class="tag">Spend the stars you collect on new looks. You have <b id="bank2">⭐ 0</b></p>
+    <div id="skinGrid" class="grid skins"></div>
+    <div class="actions"><button class="btn ghost" data-go="home">← Back</button></div>
+  </div>
+</section>
+
+<!-- HELP -->
+<section id="help" class="screen hide">
+  <div class="card">
+    <h2 class="title">How to play</h2>
+    <div class="help">
+      <div><b>Steer</b><span>◀ ▶ arrow keys or A / D — on phones, hold the big arrow buttons</span></div>
+      <div><b>Hop</b><span>Space, ↑ or W — on phones, tap HOP or anywhere on the screen</span></div>
+      <div><b>Pause</b><span>Esc or P, or the ⏸ button</span></div>
+      <div><b>⭐ Stars</b><span>Grab them for points and to buy skins</span></div>
+      <div><b>🟥 Tall blocks</b><span>Steer around them</span></div>
+      <div><b>🟨 Low blocks &amp; gaps</b><span>Hop over them</span></div>
+      <div><b>🛡️ Shield</b><span>Blocks one bump</span></div>
+      <div><b>🧲 Magnet</b><span>Pulls in nearby stars</span></div>
+      <div><b>🐌 Slow-mo</b><span>Everything slows down for a bit</span></div>
+      <div><b>✖️2 Double</b><span>Every star counts twice</span></div>
+      <div><b>❤️ Heart</b><span>Gives one heart back</span></div>
+      <div><b>🍼 Tiny Tots</b><span>Roly steers itself and can't fall. Little hands can mash any key or tap anywhere to hop.</span></div>
+    </div>
+    <div class="actions"><button class="btn ghost" data-go="home">← Back</button></div>
+  </div>
+</section>
+
+<!-- PAUSE -->
+<section id="pause" class="screen hide">
+  <div class="card small">
+    <h2 class="title">Paused</h2>
+    <div class="actions col">
+      <button class="btn" id="btnResume">▶ Keep rolling</button>
+      <button class="btn ghost" id="btnRestart">↻ Start over</button>
+      <button class="btn ghost" id="btnFinish">🏁 All done</button>
+    </div>
+  </div>
+</section>
+
+<!-- GAME OVER / RESULT -->
+<section id="over" class="screen hide">
+  <div class="card small">
+    <h2 class="title" id="overTitle">Nice roll!</h2>
+    <div id="overBody"></div>
+    <div class="actions col">
+      <button class="btn" id="btnNext">Next level →</button>
+      <button class="btn" id="btnAgain">↻ Play again</button>
+      <button class="btn ghost" id="btnHome">🏠 Home</button>
+    </div>
+  </div>
+</section>
+
+<script src="game.js"></script>
+</body>
+</html>
