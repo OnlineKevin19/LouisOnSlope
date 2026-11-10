@@ -159,6 +159,7 @@ svg.ic{width:1.2em;height:1.2em;vertical-align:-.24em;display:inline-block}
 #hudHp.low .hpbar i{background:var(--red)}
 #hudHp.low svg.ic{animation:hpbeat .55s infinite}
 #hudHp.hit{animation:hpshake .4s}
+#hudHp.hit.big{animation:hpshake .4s 2}
 @keyframes hpshake{20%{transform:translateX(-7px) rotate(-2deg)}45%{transform:translateX(6px) rotate(2deg)}70%{transform:translateX(-3px)}}
 @keyframes hpbeat{50%{transform:scale(1.25)}}
 @media (prefers-reduced-motion:reduce){#hudHp.hit,#hudHp.low svg.ic{animation:none}}

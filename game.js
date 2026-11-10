@@ -88,9 +88,9 @@ const icon = n => `<svg class="ic" viewBox="0 0 24 24" stroke="#1d1530" stroke-w
 // ---------- game data ----------
 const DIFFS = {
   tots:   { v0: 8,  v1: 9,  ramp: 1500, hearts: Infinity, dmg: 0, curve: 1.2, hazard: .55, react: 1.3, stars: 1,  maxBlocks: 1, lowOpen: true,  gaps: false, gapMax: 0, movers: false, narrow: false, slalom: false, rails: true, bouncy: true },
-  chill:  { v0: 11, v1: 18, ramp: 1800, hearts: 3, dmg: 25, curve: 2.5, hazard: .8, react: .95, stars: .85, maxBlocks: 2, lowOpen: true,  gaps: true, gapMax: 1, movers: false, narrow: false, slalom: true },
-  normal: { v0: 14, v1: 25, ramp: 1600, hearts: 2, dmg: 34, curve: 4,   hazard: 1,  react: .68, stars: .75, maxBlocks: 3, lowOpen: false, gaps: true, gapMax: 2, movers: true,  narrow: true,  slalom: true },
-  wild:   { v0: 19, v1: 33, ramp: 1400, hearts: 1, dmg: 50, curve: 5.5, hazard: 1,  react: .5,  stars: .65, maxBlocks: 4, lowOpen: false, gaps: true, gapMax: 3, movers: true,  narrow: true,  slalom: true },
+  chill:  { v0: 11, v1: 18, ramp: 1800, hearts: 3, dmg: 1, curve: 2.5, hazard: .8, react: .95, stars: .85, maxBlocks: 2, lowOpen: true,  gaps: true, gapMax: 1, movers: false, narrow: false, slalom: true },
+  normal: { v0: 14, v1: 25, ramp: 1600, hearts: 2, dmg: 1.3, curve: 4,   hazard: 1,  react: .68, stars: .75, maxBlocks: 3, lowOpen: false, gaps: true, gapMax: 2, movers: true,  narrow: true,  slalom: true },
+  wild:   { v0: 19, v1: 33, ramp: 1400, hearts: 1, dmg: 1.6, curve: 5.5, hazard: 1,  react: .5,  stars: .65, maxBlocks: 4, lowOpen: false, gaps: true, gapMax: 3, movers: true,  narrow: true,  slalom: true },
 };
 const DIFF_LABEL = { chill: 'Chill', normal: 'Normal', wild: 'Wild' };
 
@@ -111,7 +111,7 @@ const LEVELS = [
 function levelDiff(L) {
   const f = L.f;
   return Object.assign({}, DIFFS.chill, {
-    v0: L.v[0], v1: L.v[1], ramp: L.len, curve: L.curve, hearts: 3, dmg: 30, hazard: 1, react: .85,
+    v0: L.v[0], v1: L.v[1], ramp: L.len, curve: L.curve, hearts: 3, dmg: 1.2, hazard: 1, react: .85,
     maxBlocks: f.blocks || 2, lowOpen: L.p < .3, gaps: !!f.gaps, gapMax: f.gaps || 0,
     movers: !!f.movers, narrow: !!f.narrow, slalom: L.p >= .4,
   });
@@ -425,19 +425,23 @@ function hitObstacle(r, o, ox, oz) {
   if (r.D.bouncy) { b.vy = 10; b.ground = false; b.air = 1; S('boing'); return; }
   if (r.inv > 0) return;
   if (r.shield > 0) { r.shield = 0; r.inv = .6; S('power'); toast('🛡️ Shield saved you!'); return; }
-  damage(r);
+  // a clip on the corner or a low block is a small bump; a head-on crash into a tall block is a big one
+  const square = 1 - Math.abs(b.x - ox) / (o.w / 2 + .35);
+  damage(r, o.h < 1 ? 5 : square < .45 ? 10 : o.mv ? 25 : 20);
 }
-function damage(r) {
+function damage(r, base) {
   const b = r.ball;
   r.hits++; r.cleanBest = Math.max(r.cleanBest, b.z - r.cleanStart); r.cleanStart = b.z;
   r.inv = 1.8; r.shake = .35; S('hit');
   if (r.mode === 'rush') { r.timer = Math.max(0, r.timer - 3); toast('−3 seconds'); return; }
-  r.hp = Math.max(0, r.hp - r.D.dmg); r.lastHit = r.time; hpFlash();
+  const amt = Math.round(base * r.D.dmg);
+  r.hp = Math.max(0, r.hp - amt); r.lastHit = r.time; r.lastDmg = amt; hpFlash(amt >= 18);
+  if (amt >= 18) r.shake = .5;
   if (r.hp <= 0) end(false);
 }
 function fell(r) {
   const b = r.ball;
-  if (r.inv <= 0 || b.fall) { r.inv = 0; damage(r); }
+  if (r.inv <= 0 || b.fall) { r.inv = 0; damage(r, 25); }
   if (r.done) return;
   let i = Math.floor(b.z / ROW) + 2;
   for (let n = 0; n < 40; n++, i++) {
@@ -612,6 +616,9 @@ function drawRunBall(r) {
     ctx.fillStyle = '#fbf7ef'; ctx.beginPath(); ctx.roundRect(x, y, w, h, h / 2); ctx.fill();
     if (r.hp > 0) { ctx.save(); ctx.clip(); ctx.fillStyle = hpColor(r.hp); ctx.fillRect(x, y, w * r.hp / 100, h); ctx.restore(); }
     ctx.lineWidth = 2.5; ctx.strokeStyle = INK; ctx.beginPath(); ctx.roundRect(x, y, w, h, h / 2); ctx.stroke();
+    const fs = Math.max(14, rad * (r.lastDmg >= 18 ? .75 : .5)), ty = y - fs * .5 - since * rad * .5;
+    ctx.font = `${Math.round(fs)}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+    ctx.lineWidth = 5; ctx.strokeText('-' + r.lastDmg, p[0], ty); ctx.fillStyle = r.lastDmg >= 18 ? '#e2553f' : '#ffd23f'; ctx.fillText('-' + r.lastDmg, p[0], ty);
     ctx.restore();
   }
   if (r.inv > 0 && !r.D.bouncy && Math.floor(r.blink * 14) % 2) return;
@@ -710,7 +717,7 @@ function hud(r) {
 
 const hpColor = hp => hp > 67 ? '#1fa58a' : hp > 34 ? '#ffd23f' : '#e2553f';
 let hpT = 0;
-function hpFlash() { hudEl.hp.classList.add('hit'); clearTimeout(hpT); hpT = setTimeout(() => hudEl.hp.classList.remove('hit'), 420); }
+function hpFlash(big) { hudEl.hp.classList.toggle('big', !!big); hudEl.hp.classList.add('hit'); clearTimeout(hpT); hpT = setTimeout(() => hudEl.hp.classList.remove('hit'), 420); }
 let toastT = 0;
 function toast(msg) {
   if (state !== 'play') return;
