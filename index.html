@@ -44,36 +44,38 @@
   <div class="card">
     <div class="topbar">
       <label class="who">Who's playing?
-        <input id="name" maxlength="12" placeholder="Your name" autocomplete="off">
+        <input id="name" maxlength="12" placeholder="Your name" autocomplete="off" list="players">
+        <datalist id="players"></datalist>
       </label>
       <div class="bank" id="bank">⭐ 0</div>
       <button id="btnSound" class="round" aria-label="Sound on or off">🔊</button>
-      <button id="btnMusic" class="round" aria-label="Music on or off">🎵</button>
+      <button id="btnMusic" class="round" aria-label="Music on or off"><i data-ic="music"></i></button>
     </div>
+    <p id="whoNote" class="whoNote"></p>
     <h1 class="logo"><span>ROLY</span> <span class="alt">ROLL</span></h1>
     <p class="tag">Roll, hop and grab the stars. Pick a way to play!</p>
 
     <div class="modes">
-      <button class="mode m-tots" data-mode="tots"><b>🍼 Tiny Tots</b><small>No losing, ever. Steer left and right, and hop on anything!</small></button>
-      <button class="mode m-endless" data-mode="endless"><b>♾️ Endless Roll</b><small>How far can you go?</small></button>
-      <button class="mode m-rush" data-mode="rush"><b>⏱️ Star Rush</b><small>60 seconds. Grab every star!</small></button>
-      <button class="mode m-trek" data-mode="trek"><b>🗺️ Level Trek</b><small>12 levels, 3 stars each</small></button>
+      <button class="mode m-tots" data-mode="tots"><b><i data-ic="tots"></i> Tiny Tots</b><small>No losing, ever. Steer left and right, and hop on anything!</small></button>
+      <button class="mode m-endless" data-mode="endless"><b><i data-ic="endless"></i> Endless Roll</b><small>How far can you go?</small></button>
+      <button class="mode m-rush" data-mode="rush"><b><i data-ic="rush"></i> Star Rush</b><small>60 seconds. Grab every star!</small></button>
+      <button class="mode m-trek" data-mode="trek"><b><i data-ic="trek"></i> Level Trek</b><small>12 levels, 3 stars each</small></button>
     </div>
 
     <div class="diffrow">
       <span>Speed for Endless &amp; Star Rush:</span>
       <div class="chips" id="diffs">
-        <button data-diff="chill">🌸 Chill</button>
-        <button data-diff="normal">⚡ Normal</button>
-        <button data-diff="wild">🔥 Wild</button>
+        <button data-diff="chill"><i data-ic="chill"></i> Chill</button>
+        <button data-diff="normal"><i data-ic="normal"></i> Normal</button>
+        <button data-diff="wild"><i data-ic="wild"></i> Wild</button>
       </div>
     </div>
 
     <div class="nav">
-      <button data-go="board">🏆 Leaderboard</button>
-      <button data-go="missions">🎯 Missions</button>
-      <button data-go="skins">🎨 Skins</button>
-      <button data-go="help">❓ How to play</button>
+      <button data-go="board"><i data-ic="board"></i> Leaderboard</button>
+      <button data-go="missions"><i data-ic="missions"></i> Missions</button>
+      <button data-go="skins"><i data-ic="skins"></i> Skins</button>
+      <button data-go="help"><i data-ic="help"></i> How to play</button>
     </div>
   </div>
 </section>
@@ -93,13 +95,13 @@
   <div class="card">
     <h2 class="title">Family Leaderboard</h2>
     <div class="chips" id="boardMode">
-      <button data-v="endless">♾️ Endless</button>
-      <button data-v="rush">⏱️ Star Rush</button>
+      <button data-v="endless"><i data-ic="endless"></i> Endless</button>
+      <button data-v="rush"><i data-ic="rush"></i> Star Rush</button>
     </div>
     <div class="chips" id="boardDiff">
-      <button data-v="chill">🌸 Chill</button>
-      <button data-v="normal">⚡ Normal</button>
-      <button data-v="wild">🔥 Wild</button>
+      <button data-v="chill"><i data-ic="chill"></i> Chill</button>
+      <button data-v="normal"><i data-ic="normal"></i> Normal</button>
+      <button data-v="wild"><i data-ic="wild"></i> Wild</button>
     </div>
     <div id="podium" class="podium"></div>
     <div id="boardRows"></div>
@@ -121,7 +123,7 @@
 <section id="skins" class="screen hide">
   <div class="card">
     <h2 class="title">Roly's Wardrobe</h2>
-    <p class="tag">Spend the stars you collect on new looks. You have <b id="bank2">⭐ 0</b></p>
+    <p class="tag">Every look has its own pattern. Save up your stars to unlock them. You have <b id="bank2"></b></p>
     <div id="skinGrid" class="grid skins"></div>
     <div class="actions"><button class="btn ghost" data-go="home">← Back</button></div>
   </div>
@@ -143,7 +145,7 @@
       <div><b>🐌 Slow-mo</b><span>Everything slows down for a bit</span></div>
       <div><b>✖️2 Double</b><span>Every star counts twice</span></div>
       <div><b>❤️ Heart</b><span>Gives one heart back</span></div>
-      <div><b>🍼 Tiny Tots</b><span>Roly can't fall off or lose. Steer like normal; any other key hops, so little hands can mash away.</span></div>
+      <div><b><i data-ic="tots"></i> Tiny Tots</b><span>Roly can't fall off or lose. Steer like normal; any other key hops, so little hands can mash away.</span></div>
     </div>
     <div class="actions"><button class="btn ghost" data-go="home">← Back</button></div>
   </div>

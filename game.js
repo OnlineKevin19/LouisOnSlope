@@ -24,10 +24,65 @@ function resize() {
 window.addEventListener('resize', resize); resize();
 
 // ---------- saved data ----------
-const KEY = 'rolyroll.v1';
-const save = { name: '', bank: 0, skin: 'grape', owned: ['grape'], boards: {}, levels: {}, missions: null, sound: true, music: true, diff: 'chill' };
-try { Object.assign(save, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) { /* private mode: play without saving */ }
-const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) { /* ignore */ } };
+// Every player name gets its own profile (stars, skins, levels, missions).
+// The leaderboard and the sound settings are shared by everyone on the device.
+const KEY = 'rolyroll.v2', OLD_KEY = 'rolyroll.v1';
+const PROFILE_FIELDS = ['bank', 'skin', 'owned', 'levels', 'missions'];
+const freshProfile = () => ({ bank: 0, skin: 'grape', owned: ['grape'], levels: {}, missions: null });
+const nameKey = n => (n || '').trim().toLowerCase() || 'player';
+const store = { name: '', profiles: {}, boards: {}, sound: true, music: true, diff: 'chill' };
+try {
+  const raw = localStorage.getItem(KEY);
+  if (raw) Object.assign(store, JSON.parse(raw));
+  else {                                 // first run after the update: keep what the old save had
+    const old = JSON.parse(localStorage.getItem(OLD_KEY) || 'null');
+    if (old) {
+      for (const k of ['boards', 'sound', 'music', 'diff']) if (k in old) store[k] = old[k];
+      store.name = old.name || '';
+      const p = freshProfile(); p.name = old.name || 'Player';
+      for (const f of PROFILE_FIELDS) if (f in old) p[f] = old[f];
+      store.profiles[nameKey(store.name)] = p;
+    }
+  }
+} catch (e) { /* private mode: play without saving */ }
+const save = Object.assign({ name: store.name, boards: store.boards, sound: store.sound, music: store.music, diff: store.diff }, freshProfile());
+let dirty = false;                       // a brand-new name is only stored once it has something to keep
+function loadProfile(name) {
+  const p = store.profiles[nameKey(name)];
+  Object.assign(save, freshProfile(), p ? JSON.parse(JSON.stringify(p)) : {});
+  save.name = name; dirty = false;
+}
+function persist() {
+  const k = nameKey(save.name);
+  if (dirty || store.profiles[k]) {
+    const p = { name: save.name || 'Player' };
+    for (const f of PROFILE_FIELDS) p[f] = save[f];
+    store.profiles[k] = p;
+  }
+  store.name = save.name; store.boards = save.boards; store.sound = save.sound; store.music = save.music; store.diff = save.diff;
+  try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) { /* ignore */ }
+}
+loadProfile(store.name);
+
+// ---------- drawn icons ----------
+const ICONS = {
+  star: '<path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6L2.5 9.4l6.6-.8z" fill="#ffd23f"/>',
+  tots: '<ellipse cx="12" cy="9" rx="6.5" ry="7.5" fill="#ff8ad8"/><path d="M12 16.5l-1.5 2h3z" fill="#ff8ad8"/><path d="M12 18.5c-2 2 2 2 0 4" fill="none"/>',
+  endless: '<path d="M12 12c-2-3-4-4.5-6-4.5a4.5 4.5 0 0 0 0 9c2 0 4-1.5 6-4.5zm0 0c2 3 4 4.5 6 4.5a4.5 4.5 0 0 0 0-9c-2 0-4 1.5-6 4.5z" fill="#3bbda0"/>',
+  rush: '<circle cx="12" cy="14" r="7.5" fill="#ff9a3c"/><path d="M10 3h4M12 3v3.5M12 14V9.5M18 7l1.5-1.5" fill="none"/>',
+  trek: '<path d="M6 4h12l-3 4 3 4H6z" fill="#8f76e0"/><path d="M6 22V3" fill="none"/>',
+  chill: '<path d="M7 18a4 4 0 0 1-.5-8 5.5 5.5 0 0 1 10.6-1A4.5 4.5 0 0 1 17 18z" fill="#ff8ad8"/>',
+  normal: '<path d="M13.5 2L5 13.5h5.5L9.5 22 19 10h-6z" fill="#ffd23f"/>',
+  wild: '<path d="M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-2.5 1-4 2.5-5.5.5 2 1 3 2 3.5C10 8.5 10.5 5 12 2z" fill="#e2553f"/>',
+  board: '<path d="M7 3h10v5a5 5 0 0 1-10 0z" fill="#ffd23f"/><path d="M7 5H4c0 3 1.5 4.5 3.5 4.5M17 5h3c0 3-1.5 4.5-3.5 4.5M12 13v4M8 21h8" fill="none"/>',
+  missions: '<circle cx="12" cy="12" r="9.5" fill="#fff"/><circle cx="12" cy="12" r="6" fill="#e2553f"/><circle cx="12" cy="12" r="2.2" fill="#fff"/>',
+  skins: '<path d="M8 3 2 7l2.5 4L7 9.5V21h10V9.5l2.5 1.5L22 7l-6-4c-1 2-7 2-8 0z" fill="#5aa9ff"/>',
+  help: '<circle cx="12" cy="12" r="9.5" fill="#ffd23f"/><path d="M9.2 9.3a2.9 2.9 0 1 1 4.3 2.5c-1 .6-1.5 1.2-1.5 2.2" fill="none"/><circle cx="12" cy="17.3" r=".7" fill="#1d1530"/>',
+  sound: '<path d="M3 9.5h4l5-4.5v14l-5-4.5H3z" fill="#8f76e0"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" fill="none"/>',
+  mute: '<path d="M3 9.5h4l5-4.5v14l-5-4.5H3z" fill="#c9c2e6"/><path d="M16 9.5l5 5M21 9.5l-5 5" fill="none"/>',
+  music: '<path d="M9 18V5l11-2v13" fill="none"/><ellipse cx="6.5" cy="18" rx="3" ry="2.4" fill="#ff8ad8"/><ellipse cx="17.5" cy="16" rx="3" ry="2.4" fill="#ff8ad8"/>',
+};
+const icon = n => `<svg class="ic" viewBox="0 0 24 24" stroke="#1d1530" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">${ICONS[n]}</svg>`;
 
 // ---------- game data ----------
 const DIFFS = {
@@ -36,7 +91,7 @@ const DIFFS = {
   normal: { v0: 14, v1: 25, ramp: 1600, hearts: 2, curve: 4,   hazard: 1,  react: .68, stars: .75, maxBlocks: 3, lowOpen: false, gaps: true, gapMax: 2, movers: true,  narrow: true,  slalom: true },
   wild:   { v0: 19, v1: 33, ramp: 1400, hearts: 1, curve: 5.5, hazard: 1,  react: .5,  stars: .65, maxBlocks: 4, lowOpen: false, gaps: true, gapMax: 3, movers: true,  narrow: true,  slalom: true },
 };
-const DIFF_LABEL = { chill: '🌸 Chill', normal: '⚡ Normal', wild: '🔥 Wild' };
+const DIFF_LABEL = { chill: 'Chill', normal: 'Normal', wild: 'Wild' };
 
 const LEVELS = [
   { name: 'First Roll',     len: 260, v: [10, 11], curve: 1.5, p: 0,   f: {} },
@@ -62,14 +117,14 @@ function levelDiff(L) {
 }
 
 const SKINS = [
-  { id: 'grape',  name: 'Grape',      c1: '#8f76e0', c2: '#ffd23f', cost: 0 },
-  { id: 'bubble', name: 'Bubblegum',  c1: '#ff8ad8', c2: '#ffffff', cost: 60 },
-  { id: 'mint',   name: 'Minty',      c1: '#3bbda0', c2: '#fbf7ef', cost: 120 },
-  { id: 'tiger',  name: 'Tiger',      c1: '#ff9a3c', c2: '#1d1530', cost: 200 },
-  { id: 'berry',  name: 'Strawberry', c1: '#e2553f', c2: '#ffd9d2', cost: 300 },
-  { id: 'sky',    name: 'Sky',        c1: '#5aa9ff', c2: '#ffffff', cost: 400 },
-  { id: 'bee',    name: 'Bumblebee',  c1: '#ffd23f', c2: '#1d1530', cost: 550 },
-  { id: 'night',  name: 'Midnight',   c1: '#2a2456', c2: '#ff8ad8', cost: 750 },
+  { id: 'grape',  name: 'Grape',      c1: '#8f76e0', c2: '#ffd23f', pat: 'stripes', cost: 0 },
+  { id: 'bubble', name: 'Bubblegum',  c1: '#ff8ad8', c2: '#ffffff', pat: 'dots',    cost: 4000 },
+  { id: 'mint',   name: 'Minty',      c1: '#3bbda0', c2: '#fbf7ef', pat: 'diamond', cost: 8000 },
+  { id: 'tiger',  name: 'Tiger',      c1: '#ff9a3c', c2: '#1d1530', pat: 'zigzag',  cost: 14000 },
+  { id: 'berry',  name: 'Strawberry', c1: '#e2553f', c2: '#ffd9d2', pat: 'heart',   cost: 22000 },
+  { id: 'sky',    name: 'Sky',        c1: '#5aa9ff', c2: '#ffffff', pat: 'star',    cost: 32000 },
+  { id: 'bee',    name: 'Bumblebee',  c1: '#ffd23f', c2: '#1d1530', pat: 'blocks',  cost: 45000 },
+  { id: 'night',  name: 'Midnight',   c1: '#2a2456', c2: '#ffd23f', pat: 'moon',    cost: 60000 },
 ];
 const skinNow = () => SKINS.find(s => s.id === save.skin) || SKINS[0];
 
@@ -470,8 +525,24 @@ function drawBall(c, x, y, rad, skin, spin, look, sq, blink) {
   c.lineWidth = Math.max(2, rad * .09); c.strokeStyle = INK; c.lineJoin = 'round';
   c.beginPath(); c.arc(0, 0, rad, 0, 7); c.fillStyle = skin.c1; c.fill();
   c.save(); c.clip(); c.fillStyle = skin.c2;
-  const fr = ((spin % 1) + 1) % 1;
-  for (let k = -1; k < 4; k++) { const t = ((k + fr) / 3) * 2 - 1; c.beginPath(); c.ellipse(0, -t * rad, rad * 1.1, rad * .15, 0, 0, 7); c.fill(); }
+  const fr = ((spin % 1) + 1) % 1, base = Math.floor(spin), pat = skin.pat || 'stripes';
+  for (let k = -1; k < 4; k++) {          // rows of the pattern roll up the ball
+    const y = -(((k + fr) / 3) * 2 - 1) * rad, odd = (((k - base) % 2) + 2) % 2;
+    const wide = odd ? [-.55, .55] : [-.85, 0, .85], few = odd ? [0] : [-.62, .62];
+    c.beginPath();
+    if (pat === 'stripes') c.ellipse(0, y, rad * 1.1, rad * .15, 0, 0, 7);
+    else if (pat === 'dots') for (const u of wide) { c.moveTo(u * rad + rad * .15, y); c.arc(u * rad, y, rad * .15, 0, 7); }
+    else if (pat === 'diamond') for (const u of wide) { const x = u * rad, s = rad * .2; c.moveTo(x, y - s); c.lineTo(x + s, y); c.lineTo(x, y + s); c.lineTo(x - s, y); c.closePath(); }
+    else if (pat === 'blocks') for (const u of wide) c.rect(u * rad - rad * .15, y - rad * .15, rad * .3, rad * .3);
+    else if (pat === 'heart') for (const u of few) { const x = u * rad, s = rad * .27; c.moveTo(x, y + s); c.bezierCurveTo(x - 1.6 * s, y - .2 * s, x - .6 * s, y - 1.2 * s, x, y - .4 * s); c.bezierCurveTo(x + .6 * s, y - 1.2 * s, x + 1.6 * s, y - .2 * s, x, y + s); }
+    else if (pat === 'star') for (const u of few) { const x = u * rad; for (let j = 0; j < 10; j++) { const a = -Math.PI / 2 + j * Math.PI / 5, q = rad * (j % 2 ? .13 : .3); c[j ? 'lineTo' : 'moveTo'](x + Math.cos(a) * q, y + Math.sin(a) * q); } c.closePath(); }
+    else if (pat === 'moon') for (const u of few) { const x = u * rad, q = rad * .3; c.moveTo(x + q * .45, y - q * .89); c.arc(x, y, q, -1.1, 1.1, true); c.arc(x + q * .5, y, q * .89, 1.63, -1.63, false); c.closePath(); }
+    if (pat === 'zigzag') {
+      c.save(); c.strokeStyle = skin.c2; c.lineWidth = rad * .14; c.lineJoin = 'miter';
+      for (let j = 0; j <= 8; j++) c[j ? 'lineTo' : 'moveTo']((j - 4) * rad * .3, y + (j % 2 ? -1 : 1) * rad * .1);
+      c.stroke(); c.restore();
+    } else c.fill();
+  }
   c.fillStyle = 'rgba(255,255,255,.4)'; c.beginPath(); c.ellipse(-rad * .42, -rad * .4, rad * .2, rad * .12, -.6, 0, 7); c.fill();
   c.restore(); c.beginPath(); c.arc(0, 0, rad, 0, 7); c.stroke();
   for (const s of [-1, 1]) {          // googly eyes on top
@@ -683,7 +754,7 @@ function end(win) {
       ${score > best && score > 0 ? '<p><span class="badge">🎉 New family record!</span></p>' : `<p>Record to beat: <b>${best}</b></p>`}`;
   }
 
-  save.bank += r.stars;
+  save.bank += r.stars; dirty = true;
   const gain = { stars: r.stars, dist, jumps: r.jumps, powers: r.powers, games: 1, clean: r.cleanBest >= 300 ? 1 : 0, levelWins: r.mode === 'trek' && win ? 1 : 0 };
   const doneNow = [];
   for (const m of missions()) {
@@ -702,9 +773,14 @@ function end(win) {
 }
 
 function refreshHome() {
-  $('#bank').textContent = '⭐ ' + save.bank;
-  $('#name').value = save.name;
-  $('#btnSound').textContent = save.sound ? '🔊' : '🔇'; $('#btnSound').classList.toggle('off', !save.sound);
+  $('#bank').innerHTML = icon('star') + ' ' + save.bank.toLocaleString();
+  if (document.activeElement !== $('#name')) $('#name').value = save.name;
+  const known = !!store.profiles[nameKey(save.name)];
+  $('#whoNote').textContent = !save.name ? 'Type your name to keep your own stars, skins and levels.'
+    : known ? `Welcome back, ${save.name}! Your stars, skins and levels are loaded.`
+    : `New player. Progress will be saved under "${save.name}".`;
+  $('#players').innerHTML = Object.values(store.profiles).filter(p => p.name && p.name !== 'Player').map(p => `<option value="${esc(p.name)}">`).join('');
+  $('#btnSound').innerHTML = icon(save.sound ? 'sound' : 'mute'); $('#btnSound').classList.toggle('off', !save.sound);
   $('#btnMusic').classList.toggle('off', !save.music || !save.sound);
   $$('#diffs button').forEach(b => b.classList.toggle('on', b.dataset.diff === save.diff));
 }
@@ -729,19 +805,19 @@ function renderMissions() {
   $('#missionList').innerHTML = missions().map(m => `<div class="mission ${m.done ? 'done' : ''}"><div class="row"><span>${m.done ? '✅' : '🎯'} ${esc(missionText(m))}</span><span>${m.done ? 'Done!' : m.p + ' / ' + m.n}</span></div><div class="bar"><i style="width:${m.p / m.n * 100}%"></i></div></div>`).join('');
 }
 function renderSkins() {
-  $('#bank2').textContent = '⭐ ' + save.bank;
+  $('#bank2').innerHTML = icon('star') + ' ' + save.bank.toLocaleString();
   const grid = $('#skinGrid'); grid.innerHTML = '';
   for (const s of SKINS) {
     const owned = save.owned.includes(s.id), on = save.skin === s.id;
     const el = document.createElement('button');
     el.className = 'skin' + (on ? ' on' : '') + (owned ? '' : ' locked');
-    el.innerHTML = `<canvas width="168" height="168"></canvas><b>${s.name}</b><span>${on ? '✔ Wearing' : owned ? 'Tap to wear' : '⭐ ' + s.cost}</span>`;
+    el.innerHTML = `<canvas width="168" height="168"></canvas><b>${s.name}</b><span>${on ? '✔ Wearing' : owned ? 'Tap to wear' : icon('star') + ' ' + s.cost.toLocaleString()}</span>`;
     drawBall(el.querySelector('canvas').getContext('2d'), 84, 100, 50, s, .3, 0, 0, false);
     el.onclick = () => {
       if (owned) save.skin = s.id;
       else if (save.bank >= s.cost) { save.bank -= s.cost; save.owned.push(s.id); save.skin = s.id; sfx.power(); }
-      else { sfx.hit(); el.querySelector('span').textContent = `Need ${s.cost - save.bank} more ⭐`; return; }
-      sfx.click(); persist(); renderSkins();
+      else { sfx.hit(); el.querySelector('span').innerHTML = `Need ${(s.cost - save.bank).toLocaleString()} more`; return; }
+      sfx.click(); dirty = true; persist(); renderSkins(); refreshHome();
     };
     grid.appendChild(el);
   }
@@ -762,7 +838,8 @@ document.addEventListener('click', e => {
   else if (t.parentElement.id === 'boardMode') { boardSel.mode = t.dataset.v; renderBoard(); }
   else if (t.parentElement.id === 'boardDiff') { boardSel.diff = t.dataset.v; renderBoard(); }
 });
-$('#name').addEventListener('input', e => { save.name = e.target.value.trim(); persist(); });
+// typing a name switches to that player's saved profile (or starts a new one)
+$('#name').addEventListener('input', e => { persist(); loadProfile(e.target.value.trim()); persist(); refreshHome(); });
 $('#btnSound').onclick = () => { save.sound = !save.sound; persist(); refreshHome(); sfx.click(); };
 $('#btnMusic').onclick = () => { save.music = !save.music; persist(); refreshHome(); sfx.click(); };
 $('#btnPause').onclick = pause;
@@ -824,6 +901,7 @@ function frame(t) {
   draw(r, state === 'pause' ? 0 : dt);
   requestAnimationFrame(frame);
 }
+$$('[data-ic]').forEach(el => { el.innerHTML = icon(el.dataset.ic); });
 demo = newRun('demo', 'chill');
 refreshHome(); show('home');
 requestAnimationFrame(frame);

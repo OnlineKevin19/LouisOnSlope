@@ -142,3 +142,10 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--purple);outline
   .topbar{gap:7px}
 }
 @media (prefers-reduced-motion:reduce){.mode{transition:none}}
+
+/* drawn symbol icons */
+svg.ic{width:1.2em;height:1.2em;vertical-align:-.24em;display:inline-block}
+[data-ic]{font-style:normal}
+.bank{white-space:nowrap}
+.round svg.ic{width:22px;height:22px;vertical-align:middle}
+.whoNote{font-size:13px;margin:10px 0 0;min-height:18px}
